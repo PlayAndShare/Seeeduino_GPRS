@@ -172,6 +172,27 @@ int GPRS::networkCheck(void)
     return 0;
 }
 
+int GPRS::SMSReadyCheck(void)
+{
+	
+	
+	return 0;
+}
+
+int GPRS::setSMSFormat(int format)
+{
+	char cmd[16];
+	format ? snprintf(cmd,sizeof(cmd),"AT+CMGF=1\r\n") : \
+		snprintf(cmd,sizeof(cmd),"AT+CMGF=0\r\n");
+	if(0 != sendCmdAndWaitForResp(cmd, "OK", DEFAULT_TIMEOUT)){
+		ERROR("ERROR: CMGF");
+		return -1;
+	}
+
+	return 0;
+	
+}
+
 int GPRS::sendSMS(char *number, char *data)
 {
     char cmd[32];
@@ -192,6 +213,7 @@ int GPRS::sendSMS(char *number, char *data)
     return 0;
 }
 
+#if 0
 int GPRS::readSMS(int messageIndex, char *message,int length)
 {
     int i = 0;
@@ -218,14 +240,180 @@ int GPRS::readSMS(int messageIndex, char *message,int length)
     return 0;
 }
 
+#endif
+
+#if 1
+// WORKING ON SMS ANALYSTIC
+int GPRS::readSMS(int messageIndex, char *phoneNumebr, int numberLen, char *message,int MessageLen)
+{
+    int i = 0;
+    char gprsBuffer[256];
+    char cmd[16];
+    char *p,*s;
+
+    sendCmdAndWaitForResp("AT+CMGF=1\r\n","OK",DEFAULT_TIMEOUT);
+    //delay(1000);
+	if(messageIndex == 0)
+	{
+		sprintf(cmd,"AT+CMGL=\"REC UNREAD\"\r\n");
+	    serialSIM800.write(cmd);
+	    cleanBuffer(gprsBuffer,256);
+	    readBuffer(gprsBuffer,256,DEFAULT_TIMEOUT);
+
+		Serial.println(gprsBuffer);
+		
+		// Get phone number, SMS message
+	    if(NULL != ( s = strstr(gprsBuffer,"+CMGL")))
+		{			
+			if(NULL != ( s = strstr(gprsBuffer,"REC UNREAD\",")))
+			{
+				s = s + 13;  // Get phone number
+				while((*s != '\"') && (i < numberLen-1))
+				{
+					phoneNumebr[i++] = *(s++);
+				}
+				phoneNumebr[i] = '\0';
+				i = 0;
+				
+				Serial.print("Read Message From: ");
+				Serial.println(phoneNumebr);
+				
+		        if(NULL != ( s = strstr(gprsBuffer,"+32")))
+				{						
+					s = s + 6;  // Get message										
+		            while((*s != '$')&&(i < MessageLen-1))
+					{
+	                	message[i++] = *(s++);
+		            }
+	    	        message[i] = '\0';
+					
+					Serial.print("Content: ");
+					Serial.println(message);
+					
+	        	}
+			}						
+	    }
+	}
+	else if(messageIndex > 0)
+	{
+		sprintf(cmd,"AT+CMGR=%d\r\n",messageIndex);
+	    serialSIM800.write(cmd);
+	    cleanBuffer(gprsBuffer,256);
+	    readBuffer(gprsBuffer,256,DEFAULT_TIMEOUT);
+
+		// Get phone number, SMS message
+	    if(NULL != ( s = strstr(gprsBuffer,"+CMGR")))
+		{
+			s = s + 17;  // Get phone number
+			while(*s != '\"')
+			{
+				phoneNumebr[i++] = *(s++);
+			}
+			phoneNumebr[i] = '\0';
+			i = 0;
+			
+	        if(NULL != ( s = strstr(gprsBuffer,"+32")))
+			{
+            	s = s + 6;  // Get message
+	            while((*s != '$')&&(i < MessageLen-1)) 
+				{
+                	message[i++] = *(s++);
+	            }
+    	        message[i] = '\0';
+        	}			
+	    }
+	}
+	
+    return 0;
+}
+
+#endif
+
+int GPRS::flushUnreadSMS(void)
+{
+	char cmd[16];
+    sprintf(cmd,"AT+CMGL=\"REC UNREAD\"\r\n");
+    sendCmd(cmd);
+	while(serialSIM800.available()) {
+		serialSIM800.read();
+	}
+    return 0;
+}
+
+int GPRS::getUnreadSMS(void)
+{
+    int i = 0, numberLen = 20, MessageLen = 64;
+    char gprsBuffer[256], phoneNumebr[20], message[64];
+    char cmd[16];
+    char *p,*s;
+
+    sendCmdAndWaitForResp("AT+CMGF=1\r\n","OK",DEFAULT_TIMEOUT);
+    //delay(1000);
+	sprintf(cmd,"AT+CMGL=\"REC UNREAD\"\r\n");
+    serialSIM800.write(cmd);
+    cleanBuffer(gprsBuffer,256);
+    readBuffer(gprsBuffer,256,DEFAULT_TIMEOUT);
+
+	Serial.println(gprsBuffer);
+	
+	// Get phone number, SMS message
+    if(NULL != ( s = strstr(gprsBuffer,"+CMGL")))
+	{			
+		if(NULL != ( s = strstr(gprsBuffer,"REC UNREAD\",")))
+		{
+			s = s + 13;  // Get phone number
+			while((*s != '\"') && (i < numberLen-1))
+			{
+				phoneNumebr[i++] = *(s++);
+			}
+			phoneNumebr[i] = '\0';
+			i = 0;
+			
+			Serial.print("Read Message From: ");
+			Serial.println(phoneNumebr);
+			
+	        if(NULL != ( s = strstr(gprsBuffer,"+32")))
+			{						
+				s = s + 6;  // Get message										
+	            while((*s != '$')&&(i < MessageLen-1))
+				{
+                	message[i++] = *(s++);
+	            }
+    	        message[i] = '\0';
+				
+				Serial.print("Content: ");
+				Serial.println(message);
+				
+        	}
+		}						
+    }
+	
+    return 0;
+}
+
+int GPRS::hangUpCall(void)
+{
+    if(0 != sendCmdAndWaitForResp("ATH0\r\n","OK",DEFAULT_TIMEOUT)) {
+        ERROR("Hang up call error!");
+        return -1;
+    }            
+    return 0;
+}
+
 int GPRS::deleteSMS(int index)
 {
     char cmd[16];
     snprintf(cmd,sizeof(cmd),"AT+CMGD=%d\r\n",index);
-    sendCmd(cmd);
+	if(0 != sendCmdAndWaitForResp(cmd,"OK",5)) {
+		return -1;
+	}
+//    sendCmd(cmd);
+	
     return 0;
 }
 
+
+#if 0
 int GPRS::callUp(char *number)
 {
     char cmd[24];
@@ -284,3 +472,6 @@ int GPRS::shutTCP(void)
     sendCmd("AT+CIPSHUT\r\n");
     return 0;
 }
+
+#endif
+

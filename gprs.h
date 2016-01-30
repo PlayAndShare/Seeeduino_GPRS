@@ -49,6 +49,9 @@ class GPRS: public SIM800
 public:
     uint32_t _ip;
     char ip_string[20];
+	char RING_PhoneNumber[16];
+	char SMS_PhoneNumber[16];
+	char SMS_message[256];
 
     /** Create GPRS instance
      *  @param number default phone number during mobile communication
@@ -96,6 +99,14 @@ public:
      */
     int networkCheck(void);
 
+	/** Set SMS message format 
+     *  @param  *format 1 to set Text mode, 0 to set PDU mode
+     *  @returns
+     *      0 on success
+     *      -1 on error
+     */
+	int setSMSFormat(int format);
+
     /** send text SMS
      *  @param  *number phone number which SMS will be send to
      *  @param  *data   message that will be send to
@@ -104,6 +115,7 @@ public:
      *      -1 on error
      */
     int sendSMS(char* number, char* data);
+    
 
     /** read SMS if getting a SMS message
      *  @param  buffer  buffer that get from GPRS module(when getting a SMS, GPRS module will return a buffer array)
@@ -113,7 +125,13 @@ public:
      *      0 on success
      *      -1 on error
      */
-    int readSMS(int messageIndex, char *message, int length);
+    //int readSMS(int messageIndex, char *message, int length);
+    int readSMS(int messageIndex, char *phoneNumebr, int NumberLen, char *message,int MessageLen);
+
+	int getUnreadSMS(void);	
+	int hangUpCall(void);
+	int flushUnreadSMS(void);
+	
 
     /** delete SMS message on SIM card
      *  @param  index   the index number which SMS message will be delete
@@ -122,7 +140,9 @@ public:
      *      -1 on error
      */
     int deleteSMS(int index);
-
+	int	SMSReadyCheck(void);
+	
+#if 0
     /** call someone
      *  @param  number  the phone number which you want to call
      *  @returns
@@ -168,5 +188,7 @@ public:
      *      -1 on error
      */
     int shutTCP(void);
+#endif	
 };
 #endif
+

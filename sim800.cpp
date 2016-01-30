@@ -60,6 +60,7 @@ int SIM800::checkReadable(void)
     return serialSIM800.available();
 }
 
+#if 0
 int SIM800::readBuffer(char *buffer,int count, unsigned int timeOut)
 {
     int i = 0;
@@ -84,6 +85,28 @@ int SIM800::readBuffer(char *buffer,int count, unsigned int timeOut)
     }
     return 0;
 }
+#else
+int SIM800::readBuffer(char *buffer,int count, unsigned int timeOut)
+{
+    int i = 0;
+    unsigned long timerStart;
+    timerStart = millis();
+    while( (millis() - timerStart <= 1000 * timeOut) && (i < (count - 1)) ) {
+        if(serialSIM800.available()) {
+            char c = serialSIM800.read();
+            if (c == '\r' || c == '\n') c = '$';                            
+            buffer[i++] = c;
+        }
+    }	
+
+    delay(500);
+    while(serialSIM800.available()) {   // display the other thing..
+        serialSIM800.read();
+    }
+
+    return 0;
+}
+#endif
 
 void SIM800::cleanBuffer(char *buffer, int count)
 {
