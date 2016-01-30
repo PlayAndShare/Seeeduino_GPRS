@@ -33,9 +33,9 @@ enum SMSCmd{
 };
 
 /* Global parameters */
-String masterNumber1 = "13750024343";
-String masterNumber2 = "13750024939";
-String masterNumber3 = "1375002****";
+String masterNumber1 = "135********";  /* Change Number1 to test */
+String masterNumber2 = "136********";
+String masterNumber3 = "137********";
 char default_SmsOnCmd[12] = {  /* SN0000SETON */
   'S', 'N', '0', '0', '0', '0', 
   'S', 'E', 'T', 'O', 'N', '\0'
